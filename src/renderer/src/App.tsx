@@ -89,10 +89,11 @@ export function App() {
           </button>
           <button
             onClick={() => window.api.closeWindow()}
-            className="px-2 py-1.5 text-sm text-emerald-400 hover:text-red-400 transition-colors rounded-lg hover:bg-gray-800"
-            title="Cerrar ventana"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-emerald-400 hover:text-red-400 transition-colors rounded-lg hover:bg-gray-800"
+            title="Salir de Acorn"
           >
-            ✕
+            <span>Salir</span>
+            <span aria-hidden>✕</span>
           </button>
         </div>
       </header>

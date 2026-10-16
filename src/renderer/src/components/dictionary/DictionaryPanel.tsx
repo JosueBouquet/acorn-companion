@@ -8,8 +8,8 @@ export function DictionaryPanel({ words }: Props) {
   if (words.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-emerald-500">
-        <p className="text-sm font-medium">No words saved yet</p>
-        <p className="text-xs mt-1 text-emerald-600">Ask a question and save your first word!</p>
+        <p className="text-sm font-medium">Aún no hay palabras guardadas</p>
+        <p className="text-xs mt-1 text-emerald-600">Haz una pregunta y guarda tu primera palabra</p>
       </div>
     )
   }
@@ -21,8 +21,9 @@ export function DictionaryPanel({ words }: Props) {
           key={entry.id}
           className="p-4 rounded-xl bg-gray-900 border border-gray-800"
         >
-          <p className="font-semibold text-emerald-400">{entry.word}</p>
-          <p className="text-sm text-emerald-200 mt-1 leading-relaxed">{entry.meaning}</p>
+          <p className="text-xs text-emerald-500 font-medium uppercase tracking-wider mb-1">Palabra</p>
+          <p className="text-lg font-bold text-emerald-300 break-words">{entry.word}</p>
+          <p className="text-sm text-emerald-200 mt-2 leading-relaxed">{entry.meaning}</p>
           {entry.example && (
             <p className="text-xs text-emerald-500 mt-2 italic leading-relaxed border-t border-gray-800 pt-2">
               {entry.example}
