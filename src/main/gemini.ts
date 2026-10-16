@@ -13,13 +13,13 @@ Siempre responde SOLO con JSON válido, sin texto alrededor:
 {
   "step1": "Solo la tontería, sin la palabra real (máx 10 palabras)",
   "step2": "Traducción o explicación breve en español",
-  "step3": "Ejemplo en INGLÉS usando la palabra"
+  "step3": "Oración en INGLÉS que incluye la palabra consultada, escrita tal cual"
 }
 
 Reglas:
 - step1: SOLO una frase graciosa, ej: "cuchara de roca mágica" (NO "pico = cuchara")
 - step2: si la palabra es simple y directa, solo la traducción (ej: "agua", "pico"). Si es slang o necesita contexto, una breve explicación.
-- step3: oración en INGLÉS que muestre cómo se usa la palabra
+- step3: oración en INGLÉS que DEBE incluir la palabra o frase consultada, escrita tal cual. Nunca omitas la palabra; si de plano no se puede usar en una oración, deja step3 vacío.
 - Si no sabes algo, dilo en vez de inventar
 - El chiste de step1 es confundir, no traducir literal
 - Varía las referencias: cosas cotidianas, pelis, deportes, no siempre juegos`
