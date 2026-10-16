@@ -1,6 +1,6 @@
 {
   "name": "acorn-companion",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Asistente de escritorio Acorn para entender inglés sin salir del juego",
   "main": "./out/main/index.js",
   "scripts": {
@@ -54,7 +54,7 @@
     "vitest": "^4.0.0"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@google/genai": "^2.30.0",
     "better-sqlite3": "^12.11.1",
     "dotenv": "^17.4.2",
     "react": "^19.2.7",

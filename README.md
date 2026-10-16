@@ -31,7 +31,7 @@ Además:
 
 ### Opción 1: Descargar el instalador (recomendado)
 
-Descarga `Acorn-Companion-Setup-x.x.x.exe` desde la página de [Releases](https://github.com/lucinode/acorn-companion/releases). Ejecutalo, abre la app, y al iniciar te va a pedir la API key de Gemini.
+Descarga `Acorn-Companion-Setup-x.x.x.exe` desde la página de [Releases](https://github.com/lucinode/acorn-companion/releases). Ejecútalo, abre la app, y al iniciar te va a pedir la API key de Gemini.
 
 ### Opción 2: Desde código
 
@@ -42,7 +42,7 @@ pnpm install
 pnpm dev
 ```
 
-También puedes crear un archivo `.env` con `GEMINI_API_KEY=...` en la raíz para saltear la pantalla de configuración.
+También puedes crear un archivo `.env` con `GEMINI_API_KEY=...` en la raíz para omitir la pantalla de configuración.
 
 ### Obtener API key
 
@@ -54,14 +54,14 @@ En cualquiera de los dos casos, la primera vez que abras la app vas a ver una pa
 
 | Acción | Cómo |
 |---|---|
-| Preguntar una palabra | Click en el avatar → escribí → Enter |
+| Preguntar una palabra | Click en el avatar → escribe → Enter |
 | Escuchar pronunciación | Viene automático con cada respuesta |
 | Guardar palabra en diccionario | Click "Save word" después de la respuesta |
 | Preguntar otra | "Nueva pregunta" |
 | Ver diccionario | Icono 📖 en el header |
 | Activar/silenciar voz | Icono 🔊/🔇 |
 | Cerrar todo | Click ✕ (cierra app completa) |
-| Mover avatar | Arrastralo con el mouse |
+| Mover avatar | Arrástralo con el mouse |
 
 ---
 

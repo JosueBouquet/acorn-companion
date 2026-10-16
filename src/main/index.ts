@@ -1,6 +1,7 @@
 import "dotenv/config"
 import { app, BrowserWindow, ipcMain, Menu, shell } from "electron"
 import { join } from "path"
+import { appendFileSync } from "fs"
 import { initDatabase, saveWord, getAllWords, getWordCount } from "./database"
 import { initGemini, askGemini, isGeminiReady } from "./gemini"
 import { hasApiKey, setApiKey } from "./config"
@@ -12,6 +13,14 @@ app.commandLine.appendSwitch("disable-gpu-compositing")
 let companionWindow: BrowserWindow | null = null
 let assistantWindow: BrowserWindow | null = null
 let isQuitting = false
+
+function logError(message: string): void {
+  try {
+    appendFileSync(join(app.getPath("userData"), "acorn.log"), `[${new Date().toISOString()}] ${message}\n`)
+  } catch {
+    // si no se puede escribir el log, no rompemos la app
+  }
+}
 
 function createCompanionWindow(): void {
   companionWindow = new BrowserWindow({
@@ -115,7 +124,17 @@ app.whenReady().then(() => {
     if (!isGeminiReady()) {
       return { step1: "", step2: "Acorn no está listo. Abre la configuración y agrega tu API key de Gemini.", step3: "" }
     }
-    return askGemini(question)
+    try {
+      return await askGemini(question)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      logError(`llm:ask failed — ${msg}`)
+      return {
+        step1: "Oops, something went wrong!",
+        step2: `No pude conectar con Gemini. Intenta de nuevo. (detalle: ${msg.slice(0, 160)})`,
+        step3: ""
+      }
+    }
   })
 
   ipcMain.handle("dictionary:save", async (_event, word: string, meaning: string, example: string) => {
