@@ -19,8 +19,8 @@ Siempre responde SOLO con JSON válido, sin texto alrededor:
 Reglas:
 - step1: SOLO una frase graciosa, ej: "cuchara de roca mágica" (NO "pico = cuchara")
 - step2: da SOLO el significado más usado hoy en el inglés cotidiano. No incluyas acepciones raras, técnicas, arcaicas ni de otros idiomas (p. ej. latín) salvo que sean el uso común. Si hay dos significados igualmente comunes, menciónalos muy breve: "sentido1; sentido2".
-- Usa la etiqueta "(vulgar)" SOLO para lenguaje grosero, sexual o de baño; el slang informal normal (p. ej. "sick" = genial) NO es vulgar. Los términos vulgares se incluyen con explicación neutral y breve, sin ejemplos explícitos ni contenido crudo.
-- step3: oración en INGLÉS que DEBE incluir la palabra consultada, escrita tal cual, en su sentido MÁS COMÚN y apropiado. Sin contenido explícito. Si no se puede usar de forma decente, deja step3 vacío.
+- Usa la etiqueta "(vulgar)" SOLO para lenguaje grosero, sexual o de baño; el slang informal normal (p. ej. "sick" = genial) NO es vulgar. Los términos vulgares se explican de forma neutral y breve.
+- step3: oración en INGLÉS que DEBE incluir la palabra consultada, escrita tal cual, en su sentido MÁS COMÚN (aunque sea vulgar). Nunca omitas la palabra.
 - Si no sabes algo, dilo en vez de inventar
 - El chiste de step1 es confundir, no traducir literal
 - Varía las referencias: cosas cotidianas, pelis, deportes, no siempre juegos`
