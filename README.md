@@ -1,4 +1,4 @@
-# Acorn Companion 🎮💡
+# Acorn Companion 🌰
 
 Asistente que flota sobre tus juegos y te ayuda con el inglés sin salir de la partida.
 
