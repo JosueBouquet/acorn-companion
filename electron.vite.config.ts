@@ -8,7 +8,7 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
-        external: ["electron", "better-sqlite3", "dotenv"]
+        external: ["electron", "better-sqlite3", "dotenv", "@google/genai"]
       }
     }
   },

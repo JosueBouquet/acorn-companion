@@ -1,7 +1,10 @@
 import "dotenv/config"
 import { app, BrowserWindow, ipcMain, Menu, shell } from "electron"
-import { join } from "path"
+import { dirname, join } from "path"
+import { fileURLToPath } from "url"
 import { appendFileSync } from "fs"
+
+const baseDir = dirname(fileURLToPath(import.meta.url))
 import { initDatabase, saveWord, getAllWords, getWordCount } from "./database"
 import { initGemini, askGemini, isGeminiReady } from "./gemini"
 import { hasApiKey, setApiKey } from "./config"
@@ -33,7 +36,7 @@ function createCompanionWindow(): void {
     resizable: false,
     maximizable: false,
     webPreferences: {
-      preload: join(__dirname, "../preload/index.cjs"),
+      preload: join(baseDir, "../preload/index.cjs"),
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -42,7 +45,7 @@ function createCompanionWindow(): void {
   if (process.env.ELECTRON_RENDERER_URL) {
     companionWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL}/companion.html`)
   } else {
-    companionWindow.loadFile(join(__dirname, "../renderer/companion.html"))
+    companionWindow.loadFile(join(baseDir, "../renderer/companion.html"))
   }
 
   companionWindow.on("closed", () => {
@@ -64,7 +67,7 @@ function createAssistantWindow(): void {
     resizable: true,
     show: false,
     webPreferences: {
-      preload: join(__dirname, "../preload/index.cjs"),
+      preload: join(baseDir, "../preload/index.cjs"),
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -73,7 +76,7 @@ function createAssistantWindow(): void {
   if (process.env.ELECTRON_RENDERER_URL) {
     assistantWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
-    assistantWindow.loadFile(join(__dirname, "../renderer/index.html"))
+    assistantWindow.loadFile(join(baseDir, "../renderer/index.html"))
   }
 
   assistantWindow.once("ready-to-show", () => {
