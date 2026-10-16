@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.local
+.env.production
+dist/
+out/
+release/
+.next/
+resources/whisper/
+resources/model/
+*.log

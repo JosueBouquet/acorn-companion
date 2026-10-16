@@ -1,0 +1,37 @@
+appId: com.lucinode.acorn-companion
+productName: Acorn Companion
+directories:
+  buildResources: build
+  output: release
+files:
+  - "!**/.vscode/*"
+  - "!src/**/*"
+  - "!tests/**/*"
+  - "!.github/**/*"
+  - "!electron.vite.config.*"
+  - "!tsconfig*.json"
+  - "!*.md"
+  - "!.env"
+  - "!.env.*"
+  - "!.npmrc"
+  - "!pnpm-lock.yaml"
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  deleteAppDataOnUninstall: false
+  artifactName: Acorn-Companion-Setup-${version}.exe
+asarUnpack:
+  - "**/better-sqlite3/**"
+npmRebuild: true
+extraResources:
+  - from: resources/
+    to: resources/
+    filter:
+      - "**/*"

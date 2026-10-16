@@ -1,0 +1,153 @@
+import "dotenv/config"
+import { app, BrowserWindow, ipcMain, Menu, shell } from "electron"
+import { join } from "path"
+import { initDatabase, saveWord, getAllWords, getWordCount } from "./database"
+import { initGemini, askGemini, isGeminiReady } from "./gemini"
+import { hasApiKey, setApiKey } from "./config"
+import type { AvatarStatus } from "../shared/types"
+
+app.commandLine.appendSwitch("enable-transparent-visuals")
+app.commandLine.appendSwitch("disable-gpu-compositing")
+
+let companionWindow: BrowserWindow | null = null
+let assistantWindow: BrowserWindow | null = null
+let isQuitting = false
+
+function createCompanionWindow(): void {
+  companionWindow = new BrowserWindow({
+    width: 180,
+    height: 270,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    maximizable: false,
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  })
+
+  if (process.env.ELECTRON_RENDERER_URL) {
+    companionWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL}/companion.html`)
+  } else {
+    companionWindow.loadFile(join(__dirname, "../renderer/companion.html"))
+  }
+
+  companionWindow.on("closed", () => {
+    companionWindow = null
+  })
+}
+
+function createAssistantWindow(): void {
+  if (assistantWindow) {
+    assistantWindow.show()
+    assistantWindow.focus()
+    return
+  }
+
+  assistantWindow = new BrowserWindow({
+    width: 400,
+    height: 600,
+    skipTaskbar: true,
+    resizable: true,
+    show: false,
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  })
+
+  if (process.env.ELECTRON_RENDERER_URL) {
+    assistantWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
+  } else {
+    assistantWindow.loadFile(join(__dirname, "../renderer/index.html"))
+  }
+
+  assistantWindow.once("ready-to-show", () => {
+    assistantWindow?.show()
+  })
+
+  assistantWindow.on("close", (e) => {
+    if (!isQuitting) {
+      e.preventDefault()
+      assistantWindow?.hide()
+    }
+  })
+
+  assistantWindow.on("closed", () => {
+    assistantWindow = null
+  })
+}
+
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null)
+  initDatabase()
+  initGemini()
+
+  ipcMain.on("open-assistant", () => {
+    createAssistantWindow()
+  })
+
+  ipcMain.on("close-assistant", () => {
+    isQuitting = true
+    app.quit()
+  })
+
+  ipcMain.on("open-external", (_event, url: string) => {
+    shell.openExternal(url)
+  })
+
+  ipcMain.handle("config:hasApiKey", () => {
+    return hasApiKey()
+  })
+
+  ipcMain.handle("config:saveApiKey", (_event, key: string) => {
+    setApiKey(key)
+    initGemini()
+    return true
+  })
+
+  ipcMain.handle("llm:ask", async (_event, question: string) => {
+    if (!isGeminiReady()) {
+      return { step1: "", step2: "Acorn no está listo. Abre la configuración y agrega tu API key de Gemini.", step3: "" }
+    }
+    return askGemini(question)
+  })
+
+  ipcMain.handle("dictionary:save", async (_event, word: string, meaning: string, example: string) => {
+    return saveWord(word, meaning, example)
+  })
+
+  ipcMain.handle("dictionary:getAll", async () => {
+    return getAllWords()
+  })
+
+  ipcMain.handle("dictionary:getCount", async () => {
+    return getWordCount()
+  })
+
+  ipcMain.on("window:move", (_event, dx: number, dy: number) => {
+    const [x, y] = companionWindow!.getPosition()
+    companionWindow!.setPosition(x + dx, y + dy)
+  })
+
+  ipcMain.on("avatar:status", (_event, status: AvatarStatus) => {
+    companionWindow?.webContents.send("avatar:status", status)
+  })
+
+  createCompanionWindow()
+})
+
+app.on("before-quit", () => {
+  isQuitting = true
+})
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit()
+  }
+})
