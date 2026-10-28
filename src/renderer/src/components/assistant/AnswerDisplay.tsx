@@ -1,4 +1,5 @@
 interface Props {
+  word: string
   step1: string | null
   step2: string | null
   step3?: string | null
@@ -6,7 +7,7 @@ interface Props {
   showStep1: boolean
 }
 
-export function AnswerDisplay({ step1, step2, step3, isLoading, showStep1 }: Props) {
+export function AnswerDisplay({ word, step1, step2, step3, isLoading, showStep1 }: Props) {
   if (isLoading && !step1) {
     return (
       <div className="space-y-3 animate-pulse">
@@ -31,6 +32,9 @@ export function AnswerDisplay({ step1, step2, step3, isLoading, showStep1 }: Pro
             <p className="text-xs text-emerald-500 font-medium uppercase tracking-wider mb-1.5">
               Espera, en realidad es...
             </p>
+          )}
+          {word && (
+            <p className="text-lg font-bold text-emerald-300 break-words mb-2">{word}</p>
           )}
           <p className="text-base text-emerald-100 leading-relaxed">{step2}</p>
         </div>

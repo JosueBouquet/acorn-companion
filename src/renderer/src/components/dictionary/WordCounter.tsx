@@ -1,17 +1,23 @@
 import { useEffect, useState } from "react"
 import { getWordCount } from "../../services/dictionary"
 
-export function WordCounter() {
+export function WordCounter({ folderId }: { folderId: number | null }) {
   const [count, setCount] = useState(0)
 
   const refresh = async () => {
-    const c = await getWordCount()
+    const c = await getWordCount(folderId)
     setCount(c)
   }
 
   useEffect(() => {
-    refresh()
-  }, [])
+    let active = true
+    getWordCount(folderId).then((c) => {
+      if (active) setCount(c)
+    })
+    return () => {
+      active = false
+    }
+  }, [folderId])
 
   return (
     <span

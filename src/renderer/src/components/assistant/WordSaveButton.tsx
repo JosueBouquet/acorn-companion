@@ -5,15 +5,16 @@ interface Props {
   word: string
   meaning: string
   example: string
+  folderId: number | null
   onSaved?: () => void
 }
 
-export function WordSaveButton({ word, meaning, example, onSaved }: Props) {
+export function WordSaveButton({ word, meaning, example, folderId, onSaved }: Props) {
   const [saved, setSaved] = useState(false)
 
   const handleSave = async () => {
     try {
-      await saveWord(word, meaning, example)
+      await saveWord(word, meaning, example, folderId)
       setSaved(true)
       onSaved?.()
       setTimeout(() => setSaved(false), 2000)

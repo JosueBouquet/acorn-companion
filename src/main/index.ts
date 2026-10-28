@@ -5,10 +5,24 @@ import { fileURLToPath } from "url"
 import { appendFileSync } from "fs"
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
-import { initDatabase, saveWord, getAllWords, getWordCount } from "./database"
+import {
+  initDatabase,
+  saveWord,
+  saveWords,
+  updateWord,
+  getAllWords,
+  getWordCount,
+  createFolder,
+  getFolders,
+  renameFolder,
+  deleteFolder,
+  getActiveFolderId,
+  setActiveFolderId,
+  moveUncategorizedWords
+} from "./database"
 import { initGemini, askGemini, isGeminiReady } from "./gemini"
 import { hasApiKey, setApiKey } from "./config"
-import type { AvatarStatus } from "../shared/types"
+import type { AvatarStatus, WordInput } from "../shared/types"
 
 app.commandLine.appendSwitch("enable-transparent-visuals")
 app.commandLine.appendSwitch("disable-gpu-compositing")
@@ -140,16 +154,61 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle("dictionary:save", async (_event, word: string, meaning: string, example: string) => {
-    return saveWord(word, meaning, example)
+  ipcMain.handle(
+    "dictionary:save",
+    async (_event, word: string, meaning: string, example: string, folderId: number | null) => {
+      return saveWord(word, meaning, example, folderId)
+    }
+  )
+
+  ipcMain.handle("dictionary:getAll", async (_event, folderId: number | null) => {
+    return getAllWords(folderId)
   })
 
-  ipcMain.handle("dictionary:getAll", async () => {
-    return getAllWords()
+  ipcMain.handle(
+    "dictionary:saveMany",
+    async (_event, entries: WordInput[], folderId: number | null) => {
+      return saveWords(entries, folderId)
+    }
+  )
+
+  ipcMain.handle(
+    "dictionary:update",
+    async (_event, id: number, word: string, meaning: string, example: string) => {
+      return updateWord(id, word, meaning, example)
+    }
+  )
+
+  ipcMain.handle("dictionary:getCount", async (_event, folderId: number | null) => {
+    return getWordCount(folderId)
   })
 
-  ipcMain.handle("dictionary:getCount", async () => {
-    return getWordCount()
+  ipcMain.handle("folders:create", async (_event, name: string) => {
+    return createFolder(name)
+  })
+
+  ipcMain.handle("folders:getAll", async () => {
+    return getFolders()
+  })
+
+  ipcMain.handle("folders:rename", async (_event, id: number, name: string) => {
+    return renameFolder(id, name)
+  })
+
+  ipcMain.handle("folders:remove", async (_event, id: number) => {
+    return deleteFolder(id)
+  })
+
+  ipcMain.handle("folders:getActiveId", async () => {
+    return getActiveFolderId()
+  })
+
+  ipcMain.handle("folders:setActiveId", async (_event, id: number | null) => {
+    return setActiveFolderId(id)
+  })
+
+  ipcMain.handle("folders:moveUncategorized", async (_event, folderId: number) => {
+    return moveUncategorizedWords(folderId)
   })
 
   ipcMain.on("window:move", (_event, dx: number, dy: number) => {

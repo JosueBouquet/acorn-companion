@@ -1,4 +1,4 @@
-export type { WordEntry, LLMResponse, ElectronAPI } from "@shared/types"
+export type { WordEntry, WordInput, Folder, FolderSummary, LLMResponse, ElectronAPI } from "@shared/types"
 
 declare global {
   interface Window {
