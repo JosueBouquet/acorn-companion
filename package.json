@@ -1,6 +1,6 @@
 {
   "name": "acorn-companion",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Asistente de escritorio Acorn para entender inglés sin salir del juego",
   "main": "./out/main/index.js",
   "scripts": {
