@@ -1,6 +1,18 @@
-let voicesReady = false
-let enVoice: SpeechSynthesisVoice | null = null
-let esVoice: SpeechSynthesisVoice | null = null
+export type VoiceEngine = "system" | "edge"
+export type LangPrefix = "es" | "en"
+
+export interface VoiceChoice {
+  engine: VoiceEngine
+  id: string | null
+  label: string
+}
+
+export interface SystemVoiceOption {
+  name: string
+  lang: string
+  voiceURI: string
+  female: boolean
+}
 
 const EN_FEMALE_VOICES = [
   "aria", "jenny", "zira", "samantha", "susan", "hazel", "libby", "sonia",
@@ -16,18 +28,68 @@ const FEMALE_HINTS = [...EN_FEMALE_VOICES, ...ES_FEMALE_VOICES, "female", "mujer
 
 const VOICE_STORAGE_KEY = { en: "acorn.voice.en", es: "acorn.voice.es" } as const
 
-export interface FemaleVoiceOption {
-  name: string
-  lang: string
-  voiceURI: string
+let voicesReady = false
+let enVoice: SpeechSynthesisVoice | null = null
+let esVoice: SpeechSynthesisVoice | null = null
+let currentAudio: HTMLAudioElement | null = null
+let currentUrl: string | null = null
+let speechToken = 0
+
+function defaultChoice(): VoiceChoice {
+  return { engine: "system", id: null, label: "Automática" }
+}
+
+function loadChoice(lang: LangPrefix): VoiceChoice {
+  if (typeof localStorage === "undefined") return defaultChoice()
+
+  try {
+    const raw = localStorage.getItem(VOICE_STORAGE_KEY[lang])
+    if (!raw) return defaultChoice()
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<VoiceChoice>
+      if (parsed.engine === "edge" || parsed.engine === "system") {
+        return {
+          engine: parsed.engine,
+          id: typeof parsed.id === "string" ? parsed.id : null,
+          label: typeof parsed.label === "string" ? parsed.label : "Automática"
+        }
+      }
+    } catch {
+      return { engine: "system", id: raw, label: "Automática" }
+    }
+  } catch {
+    return defaultChoice()
+  }
+
+  return defaultChoice()
+}
+
+function saveChoice(lang: LangPrefix, choice: VoiceChoice): void {
+  if (typeof localStorage === "undefined") return
+
+  try {
+    localStorage.setItem(VOICE_STORAGE_KEY[lang], JSON.stringify(choice))
+  } catch {
+    return
+  }
+}
+
+const choices: Record<LangPrefix, VoiceChoice> = {
+  en: loadChoice("en"),
+  es: loadChoice("es")
+}
+
+function langPrefix(lang: string): LangPrefix {
+  return lang.toLowerCase().startsWith("en") ? "en" : "es"
 }
 
 function pickVoice(
   voices: SpeechSynthesisVoice[],
-  langPrefix: string,
+  prefix: LangPrefix,
   femaleNames: string[]
 ): SpeechSynthesisVoice | null {
-  const candidates = voices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix))
+  const candidates = voices.filter((v) => v.lang.toLowerCase().startsWith(prefix))
   if (candidates.length === 0) return null
 
   const female = candidates.find((v) =>
@@ -43,14 +105,17 @@ function isFemaleVoice(voice: SpeechSynthesisVoice): boolean {
   return FEMALE_HINTS.some((hint) => name.includes(hint))
 }
 
-function savedVoice(langPrefix: "en" | "es"): SpeechSynthesisVoice | null {
-  try {
-    const uri = localStorage.getItem(VOICE_STORAGE_KEY[langPrefix])
-    if (!uri) return null
-    return window.speechSynthesis.getVoices().find((v) => v.voiceURI === uri) ?? null
-  } catch {
-    return null
+function resolveSystemVoice(
+  prefix: LangPrefix,
+  all: SpeechSynthesisVoice[]
+): SpeechSynthesisVoice | null {
+  const choice = choices[prefix]
+  if (choice.engine === "system" && choice.id) {
+    const found = all.find((v) => v.voiceURI === choice.id)
+    if (found) return found
   }
+
+  return pickVoice(all, prefix, prefix === "en" ? EN_FEMALE_VOICES : ES_FEMALE_VOICES)
 }
 
 function initVoices(): void {
@@ -58,40 +123,8 @@ function initVoices(): void {
   if (all.length === 0) return
 
   voicesReady = true
-  enVoice = savedVoice("en") ?? pickVoice(all, "en", EN_FEMALE_VOICES)
-  esVoice = savedVoice("es") ?? pickVoice(all, "es", ES_FEMALE_VOICES)
-}
-
-export function listFemaleVoices(): FemaleVoiceOption[] {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return []
-
-  const all = window.speechSynthesis
-    .getVoices()
-    .filter((voice) => /^(es|en)/i.test(voice.lang))
-  const female = all.filter(isFemaleVoice)
-  const list = female.length > 0 ? female : all
-
-  return list
-    .map((voice) => ({ name: voice.name, lang: voice.lang, voiceURI: voice.voiceURI }))
-    .sort((a, b) => a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name))
-}
-
-export function getSelectedVoices(): { en: string | null; es: string | null } {
-  return { en: enVoice?.voiceURI ?? null, es: esVoice?.voiceURI ?? null }
-}
-
-export function setSelectedVoice(langPrefix: "en" | "es", voiceURI: string): void {
-  const voice = window.speechSynthesis.getVoices().find((v) => v.voiceURI === voiceURI)
-  if (!voice) return
-
-  if (langPrefix === "en") enVoice = voice
-  else esVoice = voice
-
-  try {
-    localStorage.setItem(VOICE_STORAGE_KEY[langPrefix], voiceURI)
-  } catch {
-    return
-  }
+  enVoice = resolveSystemVoice("en", all)
+  esVoice = resolveSystemVoice("es", all)
 }
 
 if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -99,6 +132,42 @@ if (typeof window !== "undefined" && "speechSynthesis" in window) {
   if (!voicesReady) {
     window.speechSynthesis.onvoiceschanged = initVoices
   }
+}
+
+export function listSystemVoices(): SystemVoiceOption[] {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return []
+
+  return window.speechSynthesis
+    .getVoices()
+    .filter((voice) => /^(es|en)/i.test(voice.lang))
+    .map((voice) => ({
+      name: voice.name,
+      lang: voice.lang,
+      voiceURI: voice.voiceURI,
+      female: isFemaleVoice(voice)
+    }))
+    .sort((a, b) => a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name))
+}
+
+export function getVoiceChoices(): Record<LangPrefix, VoiceChoice> {
+  return { en: { ...choices.en }, es: { ...choices.es } }
+}
+
+export function setVoiceChoice(prefix: LangPrefix, choice: VoiceChoice): void {
+  choices[prefix] = choice
+  saveChoice(prefix, choice)
+
+  if (choice.engine === "system") {
+    const all = window.speechSynthesis.getVoices()
+    const found = choice.id ? all.find((voice) => voice.voiceURI === choice.id) : null
+    if (found) {
+      if (prefix === "en") enVoice = found
+      else esVoice = found
+      return
+    }
+  }
+
+  initVoices()
 }
 
 function makeUtterance(
@@ -111,7 +180,7 @@ function makeUtterance(
   utterance.rate = 0.9
   utterance.pitch = 1.0
 
-  const isEn = lang.startsWith("en")
+  const isEn = lang.toLowerCase().startsWith("en")
   if (isEn && enVoice) utterance.voice = enVoice
   else if (!isEn && esVoice) utterance.voice = esVoice
 
@@ -121,45 +190,165 @@ function makeUtterance(
   return utterance
 }
 
+function defaultLang(): string {
+  return esVoice ? "es-MX" : "en-US"
+}
+
+function systemSpeak(
+  text: string,
+  lang: string,
+  callbacks?: { onStart?: () => void; onEnd?: () => void }
+): void {
+  const utterance = makeUtterance(text, lang, callbacks)
+  utterance.onerror = () => callbacks?.onEnd?.()
+  callbacks?.onStart?.()
+  window.speechSynthesis.speak(utterance)
+}
+
+function systemSpeakPart(text: string, lang: string, done: () => void): void {
+  const utterance = makeUtterance(text, lang, { onEnd: done })
+  utterance.onerror = done
+  window.speechSynthesis.speak(utterance)
+}
+
+function playBytes(bytes: Uint8Array, done: () => void, token: number): void {
+  if (token !== speechToken) {
+    done()
+    return
+  }
+
+  const url = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }))
+  const audio = new Audio(url)
+  currentAudio = audio
+  currentUrl = url
+
+  const cleanup = () => {
+    URL.revokeObjectURL(url)
+    if (currentAudio === audio) currentAudio = null
+    if (currentUrl === url) currentUrl = null
+  }
+
+  audio.onended = () => {
+    cleanup()
+    done()
+  }
+  audio.onerror = () => {
+    cleanup()
+    done()
+  }
+  audio.play().catch(() => {
+    cleanup()
+    done()
+  })
+}
+
+async function edgeSpeakPart(
+  text: string,
+  lang: string,
+  voice: string,
+  token: number,
+  done: () => void
+): Promise<void> {
+  try {
+    const result = await window.api.tts.edgeSynthesize(text, voice)
+    if (token !== speechToken) {
+      done()
+      return
+    }
+    if (!result.ok || !result.audio) {
+      systemSpeakPart(text, lang, done)
+      return
+    }
+    playBytes(new Uint8Array(result.audio), done, token)
+  } catch {
+    if (token !== speechToken) {
+      done()
+      return
+    }
+    systemSpeakPart(text, lang, done)
+  }
+}
+
+function speakPart(text: string, lang: string, token: number): Promise<void> {
+  return new Promise((resolve) => {
+    const choice = choices[langPrefix(lang)]
+    const done = () => resolve()
+
+    if (choice.engine === "edge" && choice.id) {
+      void edgeSpeakPart(text, lang, choice.id, token, done)
+      return
+    }
+
+    systemSpeakPart(text, lang, done)
+  })
+}
+
 export function speak(
   text: string,
   lang?: string,
   callbacks?: { onStart?: () => void; onEnd?: () => void }
 ): void {
-  if (!("speechSynthesis" in window)) return
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return
 
-  window.speechSynthesis.cancel()
+  stopSpeech()
 
-  const detected = lang ?? (esVoice ? "es-MX" : "en-US")
-  const utterance = makeUtterance(text, detected, callbacks)
+  const detected = lang ?? defaultLang()
+  const choice = choices[langPrefix(detected)]
 
-  callbacks?.onStart?.()
-  window.speechSynthesis.speak(utterance)
+  if (choice.engine === "edge" && choice.id) {
+    const token = speechToken
+    callbacks?.onStart?.()
+    void (async () => {
+      try {
+        const result = await window.api.tts.edgeSynthesize(text, choice.id!)
+        if (token !== speechToken) return
+        if (!result.ok || !result.audio) {
+          systemSpeak(text, detected, callbacks)
+          return
+        }
+        playBytes(new Uint8Array(result.audio), () => callbacks?.onEnd?.(), token)
+      } catch {
+        if (token === speechToken) systemSpeak(text, detected, callbacks)
+      }
+    })()
+    return
+  }
+
+  systemSpeak(text, detected, callbacks)
 }
 
 export function speakSequence(
   parts: { text: string; lang: string }[],
   callbacks?: { onEnd?: () => void }
 ): void {
-  if (!("speechSynthesis" in window) || parts.length === 0) return
+  if (typeof window === "undefined" || !("speechSynthesis" in window) || parts.length === 0) return
 
-  window.speechSynthesis.cancel()
+  stopSpeech()
+  const token = speechToken
 
-  const speakNext = (i: number) => {
-    if (i >= parts.length) {
-      callbacks?.onEnd?.()
-      return
+  void (async () => {
+    for (const part of parts) {
+      if (token !== speechToken) return
+      await speakPart(part.text, part.lang, token)
     }
-    const { text, lang } = parts[i]
-    const utterance = makeUtterance(text, lang, {
-      onEnd: () => speakNext(i + 1)
-    })
-    window.speechSynthesis.speak(utterance)
-  }
-
-  speakNext(0)
+    if (token === speechToken) callbacks?.onEnd?.()
+  })()
 }
 
 export function stopSpeech(): void {
-  window.speechSynthesis.cancel()
+  speechToken++
+
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel()
+  }
+
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio = null
+  }
+
+  if (currentUrl) {
+    URL.revokeObjectURL(currentUrl)
+    currentUrl = null
+  }
 }

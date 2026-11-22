@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron"
 import type {
   AvatarStatus,
+  EdgeSynthResult,
+  EdgeVoice,
   Folder,
   FolderSummary,
   WordEntry,
@@ -58,6 +60,12 @@ const api = {
       ipcRenderer.invoke("config:hasApiKey"),
     saveApiKey: (key: string): Promise<boolean> =>
       ipcRenderer.invoke("config:saveApiKey", key)
+  },
+  tts: {
+    edgeVoices: (): Promise<EdgeVoice[]> =>
+      ipcRenderer.invoke("tts:edgeVoices"),
+    edgeSynthesize: (text: string, voice: string): Promise<EdgeSynthResult> =>
+      ipcRenderer.invoke("tts:edgeSynthesize", text, voice)
   }
 }
 

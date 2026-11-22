@@ -31,6 +31,19 @@ export interface LLMResponse {
 
 export type AvatarStatus = "idle" | "active" | "thinking" | "speaking" | "sassy" | "happy" | "ok"
 
+export interface EdgeVoice {
+  shortName: string
+  name: string
+  gender: string
+  locale: string
+}
+
+export interface EdgeSynthResult {
+  ok: boolean
+  audio?: Uint8Array
+  error?: string
+}
+
 export interface ElectronAPI {
   openAssistant: () => void
   closeWindow: () => void
@@ -60,5 +73,9 @@ export interface ElectronAPI {
   config: {
     hasApiKey: () => Promise<boolean>
     saveApiKey: (key: string) => Promise<boolean>
+  }
+  tts: {
+    edgeVoices: () => Promise<EdgeVoice[]>
+    edgeSynthesize: (text: string, voice: string) => Promise<EdgeSynthResult>
   }
 }

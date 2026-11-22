@@ -21,6 +21,7 @@ import {
   moveUncategorizedWords
 } from "./database"
 import { initGemini, askGemini, isGeminiReady } from "./gemini"
+import { listEdgeVoices, synthesizeEdge } from "./edgeTts"
 import { hasApiKey, setApiKey } from "./config"
 import type { AvatarStatus, WordInput } from "../shared/types"
 
@@ -151,6 +152,24 @@ app.whenReady().then(() => {
         step2: `No pude conectar con Gemini. Intenta de nuevo. (detalle: ${msg.slice(0, 160)})`,
         step3: ""
       }
+    }
+  })
+
+  ipcMain.handle("tts:edgeVoices", async () => {
+    try {
+      return await listEdgeVoices()
+    } catch {
+      return []
+    }
+  })
+
+  ipcMain.handle("tts:edgeSynthesize", async (_event, text: string, voice: string) => {
+    try {
+      const audio = await synthesizeEdge(text, voice)
+      return { ok: true, audio }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      return { ok: false, error: message }
     }
   })
 
