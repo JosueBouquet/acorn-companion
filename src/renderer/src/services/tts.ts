@@ -2,13 +2,39 @@ let voicesReady = false
 let enVoice: SpeechSynthesisVoice | null = null
 let esVoice: SpeechSynthesisVoice | null = null
 
+const EN_FEMALE_VOICES = [
+  "aria", "jenny", "zira", "samantha", "susan", "hazel", "libby", "sonia",
+  "michelle", "eva", "google us english", "google uk english female"
+]
+
+const ES_FEMALE_VOICES = [
+  "sabina", "helena", "laura", "monica", "mónica", "paulina", "maria", "maría",
+  "elvira", "lucia", "lucía", "ximena", "carla", "google español"
+]
+
+function pickVoice(
+  voices: SpeechSynthesisVoice[],
+  langPrefix: string,
+  femaleNames: string[]
+): SpeechSynthesisVoice | null {
+  const candidates = voices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix))
+  if (candidates.length === 0) return null
+
+  const female = candidates.find((v) =>
+    femaleNames.some((name) => v.name.toLowerCase().includes(name))
+  )
+  if (female) return female
+
+  return candidates.find((v) => v.name.toLowerCase().includes("female")) ?? candidates[0]
+}
+
 function initVoices(): void {
   const all = window.speechSynthesis.getVoices()
   if (all.length === 0) return
 
   voicesReady = true
-  enVoice = all.find((v) => v.lang.startsWith("en")) ?? null
-  esVoice = all.find((v) => v.lang.startsWith("es")) ?? null
+  enVoice = pickVoice(all, "en", EN_FEMALE_VOICES)
+  esVoice = pickVoice(all, "es", ES_FEMALE_VOICES)
 }
 
 if (typeof window !== "undefined" && "speechSynthesis" in window) {
