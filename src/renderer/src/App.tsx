@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react"
 import { QuestionInput } from "./components/assistant/QuestionInput"
 import { AnswerDisplay } from "./components/assistant/AnswerDisplay"
 import { WordSaveButton } from "./components/assistant/WordSaveButton"
+import { VoiceSettingsModal } from "./components/assistant/VoiceSettingsModal"
 import { DictionaryPanel } from "./components/dictionary/DictionaryPanel"
 import { PasteHistoryModal } from "./components/dictionary/PasteHistoryModal"
 import { FoldersPanel } from "./components/folders/FoldersPanel"
@@ -29,6 +30,7 @@ export function App() {
   const [muted, setMuted] = useState(false)
   const [view, setView] = useState<View>("chat")
   const [showPaste, setShowPaste] = useState(false)
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
   const [words, setWords] = useState<WordEntry[]>([])
   const [folders, setFolders] = useState<FolderSummary[]>([])
   const [activeFolderId, setActiveFolderIdState] = useState<number | null>(null)
@@ -304,6 +306,13 @@ export function App() {
             {muted ? "🔇" : "🔊"}
           </button>
           <button
+            onClick={() => setShowVoiceSettings(true)}
+            className="px-2 py-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition-colors rounded-lg hover:bg-gray-800"
+            title="Elegir voz"
+          >
+            🎙️
+          </button>
+          <button
             onClick={() => window.api.closeWindow()}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-emerald-400 hover:text-red-400 transition-colors rounded-lg hover:bg-gray-800"
             title="Salir de Acorn"
@@ -348,6 +357,10 @@ export function App() {
           <QuestionInput onAsk={handleAsk} isLoading={isLoading} />
         )}
       </footer>
+
+      {showVoiceSettings && (
+        <VoiceSettingsModal onClose={() => setShowVoiceSettings(false)} />
+      )}
     </div>
   )
 }

@@ -12,6 +12,16 @@ const ES_FEMALE_VOICES = [
   "elvira", "lucia", "lucía", "ximena", "carla", "google español"
 ]
 
+const FEMALE_HINTS = [...EN_FEMALE_VOICES, ...ES_FEMALE_VOICES, "female", "mujer", "woman"]
+
+const VOICE_STORAGE_KEY = { en: "acorn.voice.en", es: "acorn.voice.es" } as const
+
+export interface FemaleVoiceOption {
+  name: string
+  lang: string
+  voiceURI: string
+}
+
 function pickVoice(
   voices: SpeechSynthesisVoice[],
   langPrefix: string,
@@ -28,13 +38,60 @@ function pickVoice(
   return candidates.find((v) => v.name.toLowerCase().includes("female")) ?? candidates[0]
 }
 
+function isFemaleVoice(voice: SpeechSynthesisVoice): boolean {
+  const name = voice.name.toLowerCase()
+  return FEMALE_HINTS.some((hint) => name.includes(hint))
+}
+
+function savedVoice(langPrefix: "en" | "es"): SpeechSynthesisVoice | null {
+  try {
+    const uri = localStorage.getItem(VOICE_STORAGE_KEY[langPrefix])
+    if (!uri) return null
+    return window.speechSynthesis.getVoices().find((v) => v.voiceURI === uri) ?? null
+  } catch {
+    return null
+  }
+}
+
 function initVoices(): void {
   const all = window.speechSynthesis.getVoices()
   if (all.length === 0) return
 
   voicesReady = true
-  enVoice = pickVoice(all, "en", EN_FEMALE_VOICES)
-  esVoice = pickVoice(all, "es", ES_FEMALE_VOICES)
+  enVoice = savedVoice("en") ?? pickVoice(all, "en", EN_FEMALE_VOICES)
+  esVoice = savedVoice("es") ?? pickVoice(all, "es", ES_FEMALE_VOICES)
+}
+
+export function listFemaleVoices(): FemaleVoiceOption[] {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return []
+
+  const all = window.speechSynthesis
+    .getVoices()
+    .filter((voice) => /^(es|en)/i.test(voice.lang))
+  const female = all.filter(isFemaleVoice)
+  const list = female.length > 0 ? female : all
+
+  return list
+    .map((voice) => ({ name: voice.name, lang: voice.lang, voiceURI: voice.voiceURI }))
+    .sort((a, b) => a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name))
+}
+
+export function getSelectedVoices(): { en: string | null; es: string | null } {
+  return { en: enVoice?.voiceURI ?? null, es: esVoice?.voiceURI ?? null }
+}
+
+export function setSelectedVoice(langPrefix: "en" | "es", voiceURI: string): void {
+  const voice = window.speechSynthesis.getVoices().find((v) => v.voiceURI === voiceURI)
+  if (!voice) return
+
+  if (langPrefix === "en") enVoice = voice
+  else esVoice = voice
+
+  try {
+    localStorage.setItem(VOICE_STORAGE_KEY[langPrefix], voiceURI)
+  } catch {
+    return
+  }
 }
 
 if (typeof window !== "undefined" && "speechSynthesis" in window) {
