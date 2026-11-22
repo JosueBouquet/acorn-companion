@@ -7,6 +7,10 @@ let lastRequest = 0
 
 const MODEL = "gemini-3.5-flash-lite"
 
+const MIN_GAP_MS = 6500
+const MAX_RETRIES = 2
+const MAX_RETRY_WAIT_MS = 8000
+
 const SYSTEM_INSTRUCTION = `Eres Acorn, una asistente curiosa, cálida y alentadora. Responde en español neutro.
 
 Siempre responde SOLO con JSON válido, sin texto alrededor:
@@ -41,24 +45,81 @@ export function isGeminiReady(): boolean {
   return ready && hasApiKey()
 }
 
-async function throttledCall(question: string) {
-  const now = Date.now()
-  const gap = 2500
-  const wait = Math.max(0, gap - (now - lastRequest))
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function retryDelaySeconds(message: string): number | null {
+  const match = message.match(/retryDelay"?\s*[:=]\s*"?(\d+(?:\.\d+)?)s/i)
+  if (!match) return null
+  const seconds = Number(match[1])
+  return Number.isFinite(seconds) ? seconds : null
+}
+
+function isRateLimited(message: string): boolean {
+  const low = message.toLowerCase()
+  return (
+    low.includes("429") ||
+    low.includes("quota") ||
+    low.includes("resource_exhausted") ||
+    low.includes("too many")
+  )
+}
+
+function isDailyQuota(message: string): boolean {
+  const low = message.toLowerCase()
+  return low.includes("perday") || low.includes("per_day") || low.includes("per-day")
+}
+
+function isUnavailable(message: string): boolean {
+  const low = message.toLowerCase()
+  return low.includes("503") || low.includes("unavailable")
+}
+
+function retryWaitMs(message: string, attempt: number): number | null {
+  if (isUnavailable(message)) return 1500 * (attempt + 1)
+
+  if (isRateLimited(message) && !isDailyQuota(message)) {
+    const hinted = retryDelaySeconds(message)
+    const wait = hinted !== null ? Math.ceil(hinted * 1000) : 3000 * (attempt + 1)
+    return Math.max(MIN_GAP_MS, wait)
+  }
+
+  return null
+}
+
+async function throttledCall(question: string) {
+  const gap = Math.max(0, MIN_GAP_MS - (Date.now() - lastRequest))
+  if (gap > 0) await sleep(gap)
   lastRequest = Date.now()
 
-  return genAI!.models.generateContent({
-    model: MODEL,
-    contents: question,
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      temperature: 0.9,
-      maxOutputTokens: 1024
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await genAI!.models.generateContent({
+        model: MODEL,
+        contents: question,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: "application/json",
+          temperature: 0.9,
+          maxOutputTokens: 1024
+        }
+      })
+    } catch (error) {
+      const message = errorMessage(error)
+      if (attempt >= MAX_RETRIES) throw error
+
+      const wait = retryWaitMs(message, attempt)
+      if (wait === null || wait > MAX_RETRY_WAIT_MS) throw error
+
+      await sleep(wait)
+      lastRequest = Date.now()
     }
-  })
+  }
 }
 
 export async function askGemini(question: string): Promise<{ step1: string; step2: string; step3: string }> {
@@ -92,16 +153,25 @@ export async function askGemini(question: string): Promise<{ step1: string; step
     const msg = e instanceof Error ? e.message : String(e)
     const low = msg.toLowerCase()
 
-    if (low.includes("429") || low.includes("quota") || low.includes("resource_exhausted") || low.includes("too many")) {
+    if (isDailyQuota(msg)) {
       return {
-        step1: "Alcanzaste el límite de consultas gratuitas por hoy. Intenta de nuevo mañana o espera un minuto si enviaste varias seguidas.",
-        step2: "",
+        step1: "Llegaste al límite gratuito de consultas por hoy.",
+        step2: "Se renueva a medianoche (hora del Pacífico). Si quieres evitar este tope, activa el plan pago de Gemini.",
         step3: ""
       }
     }
-    if (low.includes("503") || low.includes("unavailable") || low.includes("service unavailable")) {
+    if (isRateLimited(msg)) {
+      const seconds = retryDelaySeconds(msg)
+      const hint = seconds !== null ? ` Espera unos ${Math.ceil(seconds)} segundos.` : " Espera unos segundos."
       return {
-        step1: "Gemini está saturado en este momento.",
+        step1: "Google está limitando las consultas por minuto.",
+        step2: `Enviaste varias preguntas muy seguidas.${hint}`,
+        step3: ""
+      }
+    }
+    if (isUnavailable(msg)) {
+      return {
+        step1: "Gemini sigue saturado después de reintentar.",
         step2: "El servicio de Google está con alta demanda. Espera unos segundos e intenta de nuevo.",
         step3: ""
       }
